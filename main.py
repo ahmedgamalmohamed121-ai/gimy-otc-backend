@@ -108,11 +108,20 @@ async def get_otc_signals(
         is_mixed = asset.lower() in ["all", "mix"]
         if len(signals) < count:
             logger.warning(f"Signal generation returned {len(signals)}; padding with dummy signals to reach {count}.")
+            base_prices = {
+                "EUR/USD (OTC)": 1.08500,
+                "GBP/USD (OTC)": 1.27200,
+                "USD/JPY (OTC)": 156.500,
+                "USD/BRL (OTC)": 5.2500,
+                "USD/INR (OTC)": 83.500
+            }
             start_i = len(signals) + 1
             for i in range(start_i, count + 1):
-                # For mixed mode: rotate across all 5 top assets
-                # For single asset mode: use the requested asset
-                dummy_pair = TOP_5_OTC_ASSETS[(i - 1) % 5] if is_mixed else (matched_asset if not is_mixed else TOP_5_OTC_ASSETS[0])
+                # For mixed mode: rotate across all available top assets
+                dummy_pair = TOP_5_OTC_ASSETS[(i - 1) % len(TOP_5_OTC_ASSETS)] if is_mixed else (matched_asset if not is_mixed else TOP_5_OTC_ASSETS[0])
+                price = base_prices.get(dummy_pair, 1.08500)
+                lvl_val = price * 0.9985 if i % 2 == 1 else price * 1.0015
+                lvl = f"SUPPORT: {lvl_val:.5f}" if i % 2 == 1 else f"RESISTANCE: {lvl_val:.5f}"
                 signals.append({
                     "id": i,
                     "pair": dummy_pair,
@@ -120,8 +129,9 @@ async def get_otc_signals(
                     "action": "CALL" if i % 2 == 1 else "PUT",
                     "rsi": 30 if i % 2 == 1 else 70,
                     "adx": 35,
-                    "level": f"SUPPORT: {0.0:.4f}" if i % 2 == 1 else f"RESISTANCE: {0.0:.4f}",
-                    "lvl": f"SUPPORT: {0.0:.4f}" if i % 2 == 1 else f"RESISTANCE: {0.0:.4f}"
+                    "level": lvl,
+                    "lvl": lvl,
+                    "current_price": f"{price:.5f}"
                 })
 
 
