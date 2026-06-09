@@ -14,7 +14,7 @@ import yfinance as yf
 import pytz
 import logging
 from datetime import datetime, timedelta
-from backend.services.quotex_ws import ws_engine, TOP_5_OTC_ASSETS
+from services.quotex_ws import ws_engine, TOP_5_OTC_ASSETS
 
 logger = logging.getLogger("SignalGenerator")
 cairo_tz = pytz.timezone("Africa/Cairo")
@@ -24,6 +24,7 @@ YF_TICKERS = {
     "GBP/USD (OTC)": "GBPUSD=X",
     "USD/JPY (OTC)": "USDJPY=X",
     "USD/BRL (OTC)": "USDBRL=X",
+    "USD/INR (OTC)": "USDINR=X",
 }
 
 # ─────────────── Indicator helpers ───────────────
@@ -60,11 +61,18 @@ def _ema(series: pd.Series, span: int) -> float:
     return float(series.ewm(span=span, adjust=False).mean().iloc[-1])
 
 
-def _support_resistance(high: pd.Series, low: pd.Series, window: int = 20):
-    recent_high = high.tail(window)
-    recent_low  = low.tail(window)
+def _support_resistance(high: pd.Series, low: pd.Series, window: int = 30):
+    """Calculates support and resistance from the recent price window."""
+    actual_window = min(window, len(high))
+    if actual_window < 5:
+        return 0.0, 0.0
+    recent_high = high.tail(actual_window)
+    recent_low  = low.tail(actual_window)
     resistance  = float(recent_high.max())
     support     = float(recent_low.min())
+    # Sanity check
+    if resistance <= support or support <= 0:
+        return 0.0, 0.0
     return support, resistance
 
 # ─────────────── Yahoo Finance fetch ───────────────
@@ -122,7 +130,7 @@ async def _get_market_context(asset: str) -> dict:
             ema9        = _ema(close, 9)
             ema21       = _ema(close, 21)
             stoch_k, stoch_d = _stochastic(high, low, close, 14, 3)
-            support, resistance = _support_resistance(high, low, window=50)
+            support, resistance = _support_resistance(high, low, window=30)
 
             # Double check S/R values aren't zero or invalid
             if support <= 0 or resistance <= 0 or np.isnan(support) or np.isnan(resistance):

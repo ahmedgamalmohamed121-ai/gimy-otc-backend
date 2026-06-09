@@ -37,10 +37,11 @@ app.add_middleware(
 )
 
 TOP_5_OTC_ASSETS = [
-    "EUR/USD (OTC)", 
-    "GBP/USD (OTC)", 
-    "USD/JPY (OTC)", 
-    "USD/BRL (OTC)"
+    "EUR/USD (OTC)",
+    "GBP/USD (OTC)",
+    "USD/JPY (OTC)",
+    "USD/BRL (OTC)",
+    "USD/INR (OTC)",
 ]
 
 @app.get("/api/status")
