@@ -82,8 +82,9 @@ async def get_otc_signals(
     
     try:
         # Standardize asset selection
-        if asset.lower() == "all" or asset.lower() == "mix":
-            logger.info("Mixed signal generation requested.")
+        # VIP / ALL / MIX  → mixed signals across all TOP-5 assets
+        if asset.strip().lower() in ("all", "mix", "vip"):
+            logger.info(f"Mixed/VIP signal generation requested (asset='{asset}').")
             signals = await generate_mixed_signals(TOP_5_OTC_ASSETS, count=count, ssid=ssid)
         else:
             # Match the requested asset with TOP_5
@@ -106,7 +107,7 @@ async def get_otc_signals(
             logger.info(f"Asset signal generation requested for: {matched_asset}")
             signals = await generate_asset_signals(matched_asset, count=count, ssid=ssid)
 
-        is_mixed = asset.lower() in ["all", "mix"]
+        is_mixed = asset.strip().lower() in ("all", "mix", "vip")
         if len(signals) < count:
             logger.warning(f"Signal generation returned {len(signals)}; padding with dummy signals to reach {count}.")
             base_prices = {
